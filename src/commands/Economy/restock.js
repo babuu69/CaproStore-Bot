@@ -1,6 +1,30 @@
-import { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
+import {
+    SlashCommandBuilder,
+    PermissionFlagsBits,
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+} from 'discord.js';
 import { getColor } from '../../config/bot.js';
 import { withErrorHandling } from '../../utils/errorHandler.js';
+
+// Replace the IDs below with your server's custom emoji IDs.
+// Example: <:restock:123456789012345678>
+const EMOJIS = {
+    verify: '<a:verify:1539966415468101632>',
+    nfa: '<:bluedot:1539966417338769409>',
+    mfa: '<:bluedot:1539966417338769409>',
+    unbanned: '<:ticktyfy:1539966407029297193>',
+    banned: '<:x_:1540383734828892291>',
+    timer: '<:timer:1540381779960266784>',
+    instant: '<:ticks:1540381783613513788>',
+    stock: '<:star:1540381763099168789>',
+    price: '<:arrow:1540381810729558076>',
+    status: '<:ticks:1540381783613513788>',
+};
+
+const BUY_CHANNEL_URL = 'https://discord.com/channels/1494762739615137842/1494762742740029762';
 
 export default {
     data: new SlashCommandBuilder()
@@ -9,62 +33,34 @@ export default {
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .setDMPermission(false)
         .addStringOption(option =>
-            option
-                .setName('product')
-                .setDescription('Product name')
-                .setRequired(true)
+            option.setName('product').setDescription('Product name').setRequired(true)
         )
         .addIntegerOption(option =>
-            option
-                .setName('quantity')
-                .setDescription('How many were restocked')
-                .setRequired(true)
-                .setMinValue(1)
-                .setMaxValue(100000)
+            option.setName('quantity').setDescription('How many were restocked').setRequired(true).setMinValue(1).setMaxValue(100000)
         )
         .addStringOption(option =>
-            option
-                .setName('price')
-                .setDescription('Custom price, e.g. $5 or $4.99 each')
-                .setRequired(true)
+            option.setName('price').setDescription('Custom price, e.g. $5 or $4.99 each').setRequired(true)
         )
         .addStringOption(option =>
-            option
-                .setName('access')
-                .setDescription('Access type')
-                .setRequired(false)
-                .addChoices(
-                    { name: '❌ NFA — Non-Full Access', value: 'NFA' },
-                    { name: '🔓 MFA — Full Access', value: 'MFA' }
-                )
+            option.setName('access').setDescription('Access type').setRequired(false).addChoices(
+                { name: '<:bluedot:1539966417338769409> NFA', value: 'NFA' },
+                { name: '<:bluedot:1539966417338769409> MFA', value: 'MFA' },
+            )
         )
         .addStringOption(option =>
-            option
-                .setName('status')
-                .setDescription('Product status')
-                .setRequired(false)
-                .addChoices(
-                    { name: '✅ Unbanned', value: 'Unbanned' },
-                    { name: '🔴 Banned', value: 'Banned' }
-                )
+            option.setName('status').setDescription('Product status').setRequired(false).addChoices(
+                { name: '<:ticktyfy:1539966407029297193> Unbanned', value: 'Unbanned' },
+                { name: '<:x_:1540383734828892291> Banned', value: 'Banned' },
+            )
         )
         .addStringOption(option =>
-            option
-                .setName('warranty')
-                .setDescription('Warranty period')
-                .setRequired(false)
+            option.setName('time').setDescription('Warranty/time period, e.g. 12-hour').setRequired(false)
         )
         .addStringOption(option =>
-            option
-                .setName('format')
-                .setDescription('Display format (keep credentials out of the public embed)')
-                .setRequired(false)
+            option.setName('format').setDescription('Display format').setRequired(false)
         )
         .addStringOption(option =>
-            option
-                .setName('channel')
-                .setDescription('Channel ID to post in (leave empty for this channel)')
-                .setRequired(false)
+            option.setName('channel').setDescription('Channel ID to post in (leave empty for this channel)').setRequired(false)
         ),
 
     category: 'Economy',
@@ -75,11 +71,17 @@ export default {
         const price = interaction.options.getString('price');
         const access = interaction.options.getString('access') || 'NFA';
         const status = interaction.options.getString('status') || 'Unbanned';
-        const warranty = interaction.options.getString('warranty') || '12-hour warranty';
-        const format = interaction.options.getString('format') || 'username:<private credential>';
-        const accessDisplay = access === 'MFA' ? '🔓 **MFA — Full Access**' : '❌ **NFA — Non-Full Access**';
-        const statusDisplay = status === 'Unbanned' ? '✅ **Unbanned**' : '🔴 **Banned**';
+        const time = interaction.options.getString('time') || '12-hour';
+        const format = interaction.options.getString('format') || 'username:refreshToken';
         const channelId = interaction.options.getString('channel');
+
+        const accessDisplay = access === 'MFA'
+            ? `${EMOJIS.nfa} **MFA**`
+            : `${EMOJIS.nfa} **NFA**`;
+
+        const statusDisplay = status === 'Unbanned'
+            ? `${EMOJIS.unbanned} **Unbanned**`
+            : `${EMOJIS.banned} **Banned**`;
 
         let channel = interaction.channel;
         if (channelId) {
@@ -95,31 +97,31 @@ export default {
 
         const embed = new EmbedBuilder()
             .setColor(getColor('primary'))
-            .setTitle(`✨ RESTOCKED — ${quantity}x ${product}`)
+            .setTitle(`${EMOJIS.verify} RESTOCKED — ${quantity}x ${product}`)
             .setDescription([
                 accessDisplay,
                 statusDisplay,
-                `⏱️ **${warranty}**`,
-                '⚡ **Instant delivery**',
+                `${EMOJIS.timer} **${time}**`,
+                `${EMOJIS.instant} **Instant delivery**`,
             ].join('\n'))
             .addFields(
                 {
-                    name: '━━━━━━━━━━━━━━━━━━━━',
-                    value: `📦 **STOCK**\n**${quantity} available**`,
+                    name: `${EMOJIS.stock} **STOCK**`,
+                    value: `**${quantity} available**`,
                     inline: false,
                 },
                 {
-                    name: '💰 PRICE',
+                    name: `${EMOJIS.price} **PRICE**`,
                     value: `**${price} each**`,
                     inline: true,
                 },
                 {
-                    name: '🟢 STATUS',
+                    name: `${EMOJIS.status} **STATUS**`,
                     value: '**Available now**',
                     inline: true,
                 },
                 {
-                    name: '🔐 FORMAT',
+                    name: '**FORMAT**',
                     value: `\`${format}\``,
                     inline: false,
                 },
@@ -127,18 +129,18 @@ export default {
             .setFooter({ text: 'CaproStore • Stock announcement' })
             .setTimestamp();
 
-        await channel.send({ embeds: [embed] });
+        const buyButton = new ButtonBuilder()
+            .setLabel('Buy Now')
+            .setStyle(ButtonStyle.Link)
+            .setURL(BUY_CHANNEL_URL);
 
-        if (channel.id === interaction.channelId) {
-            await interaction.reply({
-                content: `✅ Posted the **${quantity}x ${product}** restock embed.`,
-                ephemeral: true,
-            });
-        } else {
-            await interaction.reply({
-                content: `✅ Posted the **${quantity}x ${product}** restock embed in <#${channel.id}>.`,
-                ephemeral: true,
-            });
-        }
+        const row = new ActionRowBuilder().addComponents(buyButton);
+
+        await channel.send({ embeds: [embed], components: [row] });
+
+        await interaction.reply({
+            content: `✅ Posted the **${quantity}x ${product}** restock embed.`,
+            ephemeral: true,
+        });
     }),
 };
