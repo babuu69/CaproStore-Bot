@@ -13,7 +13,10 @@ const EMOJIS = {
     verify: '<a:verify:1539966415468101632>',
     stock: '<:star:1540381763099168789>',
     member: '<:member:1540381772565577800>',
-    instant: '<:ticks:1540381783613513788>',
+    timer: '<:timer:1540381779960266784>',
+    price: '<:arrow:1540381810729558076>',
+    shield: '<:shield:1540381793033789450>',
+    status: '<:ticks:1540381783613513788>',
     cart: '<:cart:1540382163793612830>',
 };
 
@@ -21,36 +24,57 @@ const BUY_CHANNEL_URL = 'https://discord.com/channels/1494762739615137842/149476
 
 export default {
     data: new SlashCommandBuilder()
-        .setName('restock')
-        .setDescription('Post a simple restock announcement')
+        .setName('netflix')
+        .setDescription('Post a NETFLIX product listing')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .setDMPermission(false)
         .addStringOption(option =>
             option
-                .setName('name')
-                .setDescription('Restocked product name')
+                .setName('plan')
+                .setDescription('Plan name, e.g. Premium')
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option
+                .setName('duration')
+                .setDescription('Duration, e.g. 1 Month')
                 .setRequired(true)
         )
         .addIntegerOption(option =>
             option
                 .setName('quantity')
-                .setDescription('How many were restocked')
+                .setDescription('Available quantity')
                 .setRequired(true)
                 .setMinValue(1)
                 .setMaxValue(100000)
         )
+        .addStringOption(option =>
+            option
+                .setName('price')
+                .setDescription('Custom price, e.g. $3, $5.99, or FREE')
+                .setRequired(true)
+        )
+        .addStringOption(option =>
+            option
+                .setName('warranty')
+                .setDescription('Warranty, e.g. 30 Days')
+                .setRequired(true)
+        )
         .addChannelOption(option =>
             option
                 .setName('channel')
-                .setDescription('Channel to post the restock announcement in')
+                .setDescription('Channel to post the listing in')
                 .setRequired(false)
         ),
 
     category: 'Economy',
 
     execute: withErrorHandling(async (interaction) => {
-        const name = interaction.options.getString('name');
+        const plan = interaction.options.getString('plan');
+        const duration = interaction.options.getString('duration');
         const quantity = interaction.options.getInteger('quantity');
+        const price = interaction.options.getString('price');
+        const warranty = interaction.options.getString('warranty');
         const channel = interaction.options.getChannel('channel') || interaction.channel;
 
         if (!channel || !channel.isTextBased()) {
@@ -62,16 +86,27 @@ export default {
 
         const embed = new EmbedBuilder()
             .setColor(getColor('primary'))
-            .setTitle(`${EMOJIS.verify} RESTOCKED!`)
+            .setTitle(`${EMOJIS.verify} NETFLIX`)
             .setDescription([
-                `${EMOJIS.stock} **${name}**`,
+                `${EMOJIS.stock} **PLAN**`,
+                `**${plan}**`,
                 '',
-                `${EMOJIS.member} **STOCK**`,
-                `**${quantity}x Available**`,
+                `${EMOJIS.member} **AVAILABLE**`,
+                `**${quantity}**`,
                 '',
-                `${EMOJIS.instant} **Now available!**`,
+                `${EMOJIS.timer} **DURATION**`,
+                `**${duration}**`,
+                '',
+                `${EMOJIS.price} **PRICE**`,
+                `**${price}**`,
+                '',
+                `${EMOJIS.shield} **WARRANTY**`,
+                `**${warranty}**`,
+                '',
+                `${EMOJIS.status} **STATUS**`,
+                '**Available now**',
             ].join('\n'))
-            .setFooter({ text: 'CaproStore • Restock announcement' })
+            .setFooter({ text: 'CaproStore • NETFLIX' })
             .setTimestamp();
 
         const buyButton = new ButtonBuilder()
@@ -85,7 +120,7 @@ export default {
         await channel.send({ embeds: [embed], components: [row] });
 
         await interaction.reply({
-            content: `✅ Posted the **${quantity}x ${name}** restock announcement.`,
+            content: `✅ Posted the **${plan} ${duration}** NETFLIX listing.`,
             ephemeral: true,
         });
     }),
