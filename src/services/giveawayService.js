@@ -20,28 +20,27 @@ export function parseDuration(durationString) {
         throw new TitanBotError(
             'Invalid duration format provided',
             ErrorTypes.VALIDATION,
-            'Please provide a valid duration (e.g., 1h, 30m, 5d, 10s).',
+            'Use a duration such as 10s, 10m, 10 minutes, 1h, or 5d.',
             { durationString }
         );
     }
 
-    const normalized = durationString.trim().toLowerCase().replace(/\s+/g, ' ');
-    const regex = /^(\d+)\s*(seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d)$/i;
-    const match = normalized.match(regex);
+    const input = durationString.trim().toLowerCase();
+    const match = input.match(/^(\d+)\s*(seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d)$/i);
 
     if (!match) {
         throw new TitanBotError(
             `Invalid duration format: ${durationString}`,
             ErrorTypes.VALIDATION,
-            'Invalid duration format. Use: 1h, 30m, 5d, 10s (min: 10s, max: 30d)',
+            'Use: 10s, 10m, 10 minutes, 1h, or 5d.',
             { input: durationString }
         );
     }
 
-    const amount = parseInt(match[1], 10);
+    const amount = Number(match[1]);
     const unit = match[2].toLowerCase();
 
-    if (amount <= 0 || amount > 999) {
+    if (!Number.isInteger(amount) || amount <= 0 || amount > 999) {
         throw new TitanBotError(
             `Duration amount out of range: ${amount}`,
             ErrorTypes.VALIDATION,
@@ -50,25 +49,22 @@ export function parseDuration(durationString) {
         );
     }
 
-    let ms = 0;
-    if (/^s(ec(ond)?s?)?$/.test(unit)) {
-        ms = amount * 1000;
-    } else if (/^m(in(ute)?s?)?$/.test(unit)) {
-        ms = amount * 60 * 1000;
-    } else if (/^h(ou)?rs?$|^hr$/.test(unit)) {
-        ms = amount * 60 * 60 * 1000;
-    } else if (/^d(ay)?s?$/.test(unit)) {
-        ms = amount * 24 * 60 * 60 * 1000;
+    let multiplier;
+    if (['s', 'sec', 'secs', 'second', 'seconds'].includes(unit)) {
+        multiplier = 1000;
+    } else if (['m', 'min', 'mins', 'minute', 'minutes'].includes(unit)) {
+        multiplier = 60 * 1000;
+    } else if (['h', 'hr', 'hrs', 'hour', 'hours'].includes(unit)) {
+        multiplier = 60 * 60 * 1000;
     } else {
-        throw new TitanBotError(
-            `Unknown duration unit: ${unit}`,
-            ErrorTypes.VALIDATION,
-            'Please use seconds, minutes, hours, or days (e.g. 10m or 10 minutes).',
-            { unit }
-        );
+        multiplier = 24 * 60 * 60 * 1000;
     }
 
+    const ms = amount * multiplier;
+
     const maxDuration = GIVEAWAY_CONFIG.maximumDuration ?? 30 * 24 * 60 * 60 * 1000;
+    const minDuration = GIVEAWAY_CONFIG.minimumDuration ?? 10 * 1000;
+
     if (ms > maxDuration) {
         throw new TitanBotError(
             `Duration exceeds maximum: ${ms}ms > ${maxDuration}ms`,
@@ -78,7 +74,6 @@ export function parseDuration(durationString) {
         );
     }
 
-    const minDuration = GIVEAWAY_CONFIG.minimumDuration ?? 10 * 1000;
     if (ms < minDuration) {
         throw new TitanBotError(
             `Duration below minimum: ${ms}ms < ${minDuration}ms`,
@@ -194,25 +189,77 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
 
 export function createGiveawayButtons(ended = false) {
     try {
-        if (ended) return new ActionRowBuilder();
-
         return new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId('giveaway_join')
-                .setLabel('Join Giveaway')
-                .setEmoji({ id: '1539966415468101632', name: 'verify', animated: true })
+                .setLabel('🎉 Join Giveaway')
                 .setStyle(ButtonStyle.Success)
+                .setDisabled(ended)
         );
     } catch (error) {
         logger.error('Error creating giveaway buttons:', error);
         throw new TitanBotError(
             'Failed to create giveaway buttons',
             ErrorTypes.UNKNOWN,
-            'An internal error occurred while creating interactive buttons.',
+            'An internal error occurred while creating the giveaway button.',
             { error: error.message }
         );
     }
 }
+
+export function selectWinners(participants, winnerCount) {
+    if (!Array.isArray(participants) || participants.length === 0) {
+        return [];
+    }
+
+    const uniqueParticipants = [...new Set(participants)];
+
+    if (!Number.isInteger(winnerCount) || winnerCount < 1) {
+        throw new TitanBotError(
+            'Invalid winner count for selection',
+            ErrorTypes.VALIDATION,
+            'Winner count must be at least 1.',
+            { winnerCount }
+        );
+    }
+
+    const requested = Math.min(winnerCount, uniqueParticipants.length);
+    
+    try {
+        
+        const shuffled = [...uniqueParticipants];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled.slice(0, requested);
+    } catch (error) {
+        logger.error('Error selecting winners:', error);
+        throw new TitanBotError(
+            'Failed to select winners',
+            ErrorTypes.UNKNOWN,
+            'An error occurred while selecting winners.',
+            { error: error.message, participantCount: participants.length }
+        );
+    }
+}
+
+export function isUserRateLimited(userId, giveawayId) {
+    const status = getRateLimitStatus(
+        getGiveawayInteractionKey(userId, giveawayId),
+        GIVEAWAY_INTERACTION_COOLDOWN,
+    );
+    return status.attempts >= 1 && status.remaining > 0;
+}
+
+export async function recordUserInteraction(userId, giveawayId) {
+    await checkRateLimit(
+        getGiveawayInteractionKey(userId, giveawayId),
+        1,
+        GIVEAWAY_INTERACTION_COOLDOWN,
+    );
+}
+
 export async function endGiveaway(client, giveaway, guildId, endedBy) {
     try {
         if (!giveaway) {
@@ -319,7 +366,7 @@ export async function checkGiveaways(client) {
 
         await message.edit({
           embeds: [endedEmbed],
-          components: []
+          components: [createGiveawayButtons(true)]
         });
 
         giveaway.ended = true;
