@@ -162,9 +162,11 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
                 `> **${Array.isArray(giveaway.participants) ? giveaway.participants.length : (giveaway.participantCount || 0)} entered**`,
                 '',
                 `${emoji.timer} **Ends**`,
-                endTime
-                    ? `> <t:${Math.floor(endTime / 1000)}:R>`
-                    : '> **Ended**',
+                isEnded
+                    ? '> **Ended**'
+                    : (endTime
+                        ? `> <t:${Math.floor(endTime / 1000)}:R>`
+                        : '> **Ends soon**'),
                 '',
                 `${emoji.heart} **Good luck!**`,
             ].join('\n'))
