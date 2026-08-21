@@ -413,7 +413,7 @@ export async function checkGiveaways(client) {
         }
 
         if (winners.length > 0) {
-          const winnerAnnouncement = `🎉 Congratulations ${winnerMentions}! You won the **${giveaway.prize || 'giveaway'}**! Please contact <@${giveaway.hostId}> to claim your prize.`;
+          const winnerAnnouncement = `<a:confetti:1540396507474174033> Congratulations ${winnerMentions}! You won the **${giveaway.prize || 'giveaway'}**! Please contact through https://discord.com/channels/1494762739615137842/1494762742740029762 to claim your prize!`;
           const winnerPingMsg = await channel.send({ content: winnerAnnouncement });
           giveaway.winnerPingMessageId = winnerPingMsg.id;
           await markGiveawayEnded(client, giveawayId, giveaway);
