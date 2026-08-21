@@ -9,7 +9,7 @@ import { checkRateLimit, getRateLimitStatus } from '../utils/rateLimiter.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
 
 const GIVEAWAY_CONFIG = botConfig.giveaways || {};
-const GIVEAWAY_INTERACTION_COOLDOWN = 1000;
+const GIVEAWAY_INTERACTION_COOLDOWN = 5000;
 
 function getGiveawayInteractionKey(userId, giveawayId) {
     return `giveaway:${userId}:${giveawayId}`;
@@ -157,6 +157,9 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
                 '',
                 `${emoji.member} **Winners**`,
                 `> **${giveaway.winnerCount}**`,
+                '',
+                `${emoji.member} **Participants**`,
+                `> **${Array.isArray(giveaway.participants) ? giveaway.participants.length : (giveaway.participantCount || 0)} entered**`,
                 '',
                 `${emoji.timer} **Ends**`,
                 endTime
@@ -309,6 +312,7 @@ export async function endGiveaway(client, giveaway, guildId, endedBy) {
         }
 
         const participants = giveaway.participants || [];
+        giveaway.participantCount = participants.length;
         const winners = selectWinners(participants, giveaway.winnerCount || 1);
 
         const updatedGiveaway = {
@@ -382,6 +386,7 @@ export async function checkGiveaways(client) {
         }
 
         const participants = giveaway.participants || [];
+        giveaway.participantCount = participants.length;
         const winners = selectWinners(participants, giveaway.winnerCount || 1);
 
         const winnerMentions = winners.length > 0
