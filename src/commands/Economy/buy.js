@@ -6,7 +6,7 @@ const EMOJIS = {
     boughtBy: '<:mention:1540381800738721834>',
 };
 
-const THUMBNAIL_URL = 'https://cdn.discordapp.com/attachments/1494762741427208423/1540394808118476860/ChatGPT_Image_Aug_20_2026_03_22_50_PM.png?ex=6a89cbf5&is=6a887a75&hm=ed6f25bf344b76472ab653108a68485d568412e6213aa81cf5243f6a8b309283&';
+const THUMBNAIL_URL = 'https://cdn.discordapp.com/attachments/1494762741427208422/1540506738334109847/file_000000003fdc820aaf18faffe7827587.png?ex=6a8a3433&is=6a88e2b3&hm=814fe7bc33526a82f567b8842dadde7fa8c61585f1e776bc72ff50e556595d07&';
 
 export default {
     data: new SlashCommandBuilder()
