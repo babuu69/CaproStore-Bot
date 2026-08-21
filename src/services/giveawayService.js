@@ -25,8 +25,9 @@ export function parseDuration(durationString) {
         );
     }
 
-    const regex = /^(\d+)([hmds])$/i;
-    const match = durationString.trim().match(regex);
+    const normalized = durationString.trim().toLowerCase().replace(/\s+/g, ' ');
+    const regex = /^(\d+)\s*(seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d)$/i;
+    const match = normalized.match(regex);
 
     if (!match) {
         throw new TitanBotError(
@@ -50,26 +51,21 @@ export function parseDuration(durationString) {
     }
 
     let ms = 0;
-    switch (unit) {
-        case 's':
-            ms = amount * 1000;
-            break;
-        case 'm':
-            ms = amount * 60 * 1000;
-            break;
-        case 'h':
-            ms = amount * 60 * 60 * 1000;
-            break;
-        case 'd':
-            ms = amount * 24 * 60 * 60 * 1000;
-            break;
-        default:
-            throw new TitanBotError(
-                `Unknown duration unit: ${unit}`,
-                ErrorTypes.VALIDATION,
-                'Please use s (seconds), m (minutes), h (hours), or d (days).',
-                { unit }
-            );
+    if (/^s(ec(ond)?s?)?$/.test(unit)) {
+        ms = amount * 1000;
+    } else if (/^m(in(ute)?s?)?$/.test(unit)) {
+        ms = amount * 60 * 1000;
+    } else if (/^h(ou)?rs?$|^hr$/.test(unit)) {
+        ms = amount * 60 * 60 * 1000;
+    } else if (/^d(ay)?s?$/.test(unit)) {
+        ms = amount * 24 * 60 * 60 * 1000;
+    } else {
+        throw new TitanBotError(
+            `Unknown duration unit: ${unit}`,
+            ErrorTypes.VALIDATION,
+            'Please use seconds, minutes, hours, or days (e.g. 10m or 10 minutes).',
+            { unit }
+        );
     }
 
     const maxDuration = GIVEAWAY_CONFIG.maximumDuration ?? 30 * 24 * 60 * 60 * 1000;
@@ -198,37 +194,15 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
 
 export function createGiveawayButtons(ended = false) {
     try {
-        const row = new ActionRowBuilder();
+        if (ended) return new ActionRowBuilder();
 
-        if (ended) {
-            row.addComponents(
-                new ButtonBuilder()
-                    .setCustomId('giveaway_reroll')
-                    .setLabel('🎲 Reroll')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setDisabled(false),
-                new ButtonBuilder()
-                    .setCustomId('giveaway_view')
-                    .setLabel('👁️ View Winners')
-                    .setStyle(ButtonStyle.Primary)
-                    .setDisabled(false)
-            );
-        } else {
-            row.addComponents(
-                new ButtonBuilder()
-                    .setCustomId('giveaway_join')
-                    .setLabel('🎉 Join')
-                    .setStyle(ButtonStyle.Primary)
-                    .setDisabled(false),
-                new ButtonBuilder()
-                    .setCustomId('giveaway_end')
-                    .setLabel('🛑 End')
-                    .setStyle(ButtonStyle.Danger)
-                    .setDisabled(false)
-            );
-        }
-
-        return row;
+        return new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('giveaway_join')
+                .setLabel('Join Giveaway')
+                .setEmoji({ id: '1539966415468101632', name: 'verify', animated: true })
+                .setStyle(ButtonStyle.Success)
+        );
     } catch (error) {
         logger.error('Error creating giveaway buttons:', error);
         throw new TitanBotError(
@@ -239,60 +213,6 @@ export function createGiveawayButtons(ended = false) {
         );
     }
 }
-
-export function selectWinners(participants, winnerCount) {
-    if (!Array.isArray(participants) || participants.length === 0) {
-        return [];
-    }
-
-    const uniqueParticipants = [...new Set(participants)];
-
-    if (!Number.isInteger(winnerCount) || winnerCount < 1) {
-        throw new TitanBotError(
-            'Invalid winner count for selection',
-            ErrorTypes.VALIDATION,
-            'Winner count must be at least 1.',
-            { winnerCount }
-        );
-    }
-
-    const requested = Math.min(winnerCount, uniqueParticipants.length);
-    
-    try {
-        
-        const shuffled = [...uniqueParticipants];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled.slice(0, requested);
-    } catch (error) {
-        logger.error('Error selecting winners:', error);
-        throw new TitanBotError(
-            'Failed to select winners',
-            ErrorTypes.UNKNOWN,
-            'An error occurred while selecting winners.',
-            { error: error.message, participantCount: participants.length }
-        );
-    }
-}
-
-export function isUserRateLimited(userId, giveawayId) {
-    const status = getRateLimitStatus(
-        getGiveawayInteractionKey(userId, giveawayId),
-        GIVEAWAY_INTERACTION_COOLDOWN,
-    );
-    return status.attempts >= 1 && status.remaining > 0;
-}
-
-export async function recordUserInteraction(userId, giveawayId) {
-    await checkRateLimit(
-        getGiveawayInteractionKey(userId, giveawayId),
-        1,
-        GIVEAWAY_INTERACTION_COOLDOWN,
-    );
-}
-
 export async function endGiveaway(client, giveaway, guildId, endedBy) {
     try {
         if (!giveaway) {
@@ -399,7 +319,7 @@ export async function checkGiveaways(client) {
 
         await message.edit({
           embeds: [endedEmbed],
-          components: [createGiveawayButtons(true)]
+          components: []
         });
 
         giveaway.ended = true;
