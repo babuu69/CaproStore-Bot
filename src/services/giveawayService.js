@@ -134,32 +134,51 @@ export function validateWinnerCount(winnerCount) {
 
 export function createGiveawayEmbed(giveaway, status, winners = []) {
     try {
-        const statusEmoji = status === 'ended' ? '🎉' : status === 'reroll' ? '🔄' : '🎉';
         const isEnded = status === 'ended' || status === 'reroll';
         const color = isEnded ? getColor('giveaway.ended') : getColor('giveaway.active');
-        
+
+        const emoji = {
+            confetti: '<a:confetti:1540396507474174033>',
+            star: '<:star:1540381763099168789>',
+            member: '<:member:1540381772565577800>',
+            timer: '<:timer:1540381779960266784>',
+            heart: '<:heart:1540381765217296544>',
+        };
+
+        const endTime = giveaway.endsAt || giveaway.endTime;
+
         const embed = new EmbedBuilder()
-            .setTitle(`${statusEmoji} ${giveaway.prize}`)
-            .setDescription('React with the button below to enter!')
             .setColor(color)
-            .addFields(
-                { name: '👤 Hosted by', value: `<@${giveaway.hostId}>`, inline: true },
-                { name: '🏆 Winners', value: giveaway.winnerCount.toString(), inline: true },
-                { name: '👥 Entries', value: giveaway.participants?.length?.toString() || '0', inline: true }
-            );
+            .setThumbnail('https://cdn.discordapp.com/attachments/1494762741427208423/1540394808118476860/ChatGPT_Image_Aug_20_2026_03_22_50_PM.png?ex=6a89cbf5&is=6a887a75&hm=ed6f25bf344b76472ab653108a68485d568412e6213aa81cf5243f6a8b309283&')
+            .setTitle(`${emoji.confetti} GIVEAWAY`)
+            .setDescription([
+                `${emoji.star} **Prize**`,
+                `> **${giveaway.prize}**`,
+                '',
+                `${emoji.member} **Winners**`,
+                `> **${giveaway.winnerCount}**`,
+                '',
+                `${emoji.timer} **Ends**`,
+                endTime
+                    ? `> <t:${Math.floor(endTime / 1000)}:R>`
+                    : '> **Ended**',
+                '',
+                `${emoji.heart} **Good luck!**`,
+            ].join('\n'))
+            .setTimestamp();
 
         if (isEnded) {
-            const winnerDisplay = winners.length > 0 
+            const winnerDisplay = winners.length > 0
                 ? winners.map(id => `<@${id}>`).join(', ')
                 : 'No valid entries';
-            embed.addFields({ name: '🎯 Winners', value: winnerDisplay, inline: false });
-        } else {
-            const endTime = giveaway.endsAt || giveaway.endTime;
-            embed.addFields({ name: '⏰ Ends', value: `<t:${Math.floor(endTime / 1000)}:R>`, inline: false });
+
+            embed.addFields({
+                name: `${emoji.member} Winners`,
+                value: winnerDisplay,
+                inline: false,
+            });
         }
 
-        embed.setTimestamp();
-        
         return embed;
     } catch (error) {
         logger.error('Error creating giveaway embed:', error);
