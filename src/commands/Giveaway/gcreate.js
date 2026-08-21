@@ -44,6 +44,12 @@ export default {
                 .setDescription("The prize being given away.")
                 .setRequired(true),
         )
+        .addUserOption((option) =>
+            option
+                .setName("winner")
+                .setDescription("Optional user who will be guaranteed to win when the giveaway ends.")
+                .setRequired(false),
+        )
         .addChannelOption((option) =>
             option
                 .setName("channel")
@@ -80,6 +86,7 @@ export default {
         const durationString = interaction.options.getString("duration");
         const winnerCount = interaction.options.getInteger("winners");
         const prize = interaction.options.getString("prize");
+        const designatedWinner = interaction.options.getUser("winner");
         const targetChannel = interaction.options.getChannel("channel") || interaction.channel;
 
         const durationMs = parseDuration(durationString);
@@ -106,6 +113,7 @@ export default {
             endTime: endTime,
             endsAt: endTime,
             winnerCount: winnerCount,
+            designatedWinnerId: designatedWinner?.id ?? null,
             participants: [],
             isEnded: false,
             ended: false,
@@ -156,6 +164,11 @@ export default {
                             value: durationString,
                             inline: true
                         },
+                        ...(designatedWinner ? [{
+                            name: 'Chosen Winner',
+                            value: `<@${designatedWinner.id}>`,
+                            inline: true
+                        }] : []),
                         {
                             name: 'Channel',
                             value: targetChannel.toString(),
@@ -174,7 +187,7 @@ export default {
             embeds: [
                 successEmbed(
                     `Giveaway Started! 🎉`,
-                    `A new giveaway for **${prizeName}** has been started in ${targetChannel} and will end in **${durationString}**.`,
+                    `A new giveaway for **${prizeName}** has been started in ${targetChannel} and will end in **${durationString}**.${designatedWinner ? ` The chosen winner is ${designatedWinner}.` : ''}`,
                 ),
             ],
             flags: MessageFlags.Ephemeral,
