@@ -22,12 +22,11 @@ export default {
                 .setMinValue(1)
                 .setMaxValue(100000)
         )
-        .addNumberOption(option =>
+        .addStringOption(option =>
             option
                 .setName('price')
-                .setDescription('Price per item')
+                .setDescription('Custom price, e.g. $5 or $4.99 each')
                 .setRequired(true)
-                .setMinValue(0)
         )
         .addStringOption(option =>
             option
@@ -35,8 +34,8 @@ export default {
                 .setDescription('Access type')
                 .setRequired(false)
                 .addChoices(
-                    { name: 'Non-Full Access', value: 'Non-Full Access' },
-                    { name: 'Full Access', value: 'Full Access' }
+                    { name: '❌ NFA — Non-Full Access', value: 'NFA' },
+                    { name: '🔓 MFA — Full Access', value: 'MFA' }
                 )
         )
         .addStringOption(option =>
@@ -45,8 +44,8 @@ export default {
                 .setDescription('Product status')
                 .setRequired(false)
                 .addChoices(
-                    { name: 'Unbanned', value: 'Unbanned' },
-                    { name: 'Banned', value: 'Banned' }
+                    { name: '✅ Unbanned', value: 'Unbanned' },
+                    { name: '🔴 Banned', value: 'Banned' }
                 )
         )
         .addStringOption(option =>
@@ -73,11 +72,13 @@ export default {
     execute: withErrorHandling(async (interaction) => {
         const product = interaction.options.getString('product');
         const quantity = interaction.options.getInteger('quantity');
-        const price = interaction.options.getNumber('price');
-        const access = interaction.options.getString('access') || 'Non-Full Access';
+        const price = interaction.options.getString('price');
+        const access = interaction.options.getString('access') || 'NFA';
         const status = interaction.options.getString('status') || 'Unbanned';
         const warranty = interaction.options.getString('warranty') || '12-hour warranty';
         const format = interaction.options.getString('format') || 'username:<private credential>';
+        const accessDisplay = access === 'MFA' ? '🔓 **MFA — Full Access**' : '❌ **NFA — Non-Full Access**';
+        const statusDisplay = status === 'Unbanned' ? '✅ **Unbanned**' : '🔴 **Banned**';
         const channelId = interaction.options.getString('channel');
 
         let channel = interaction.channel;
@@ -96,8 +97,8 @@ export default {
             .setColor(getColor('primary'))
             .setTitle(`✨ RESTOCKED — ${quantity}x ${product}`)
             .setDescription([
-                `❌ **${access}**`,
-                `✅ **${status}**`,
+                accessDisplay,
+                statusDisplay,
                 `⏱️ **${warranty}**`,
                 '⚡ **Instant delivery**',
             ].join('\n'))
@@ -109,7 +110,7 @@ export default {
                 },
                 {
                     name: '💰 PRICE',
-                    value: `**$${price.toFixed(2)} each**`,
+                    value: `**${price} each**`,
                     inline: true,
                 },
                 {
