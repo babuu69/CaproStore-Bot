@@ -207,12 +207,8 @@ export function createGiveawayButtons(ended = false) {
     }
 }
 
-export function selectWinners(participants, winnerCount) {
-    if (!Array.isArray(participants) || participants.length === 0) {
-        return [];
-    }
-
-    const uniqueParticipants = [...new Set(participants)];
+export function selectWinners(participants, winnerCount, designatedWinnerId = null) {
+    const uniqueParticipants = Array.isArray(participants) ? [...new Set(participants)] : [];
 
     if (!Number.isInteger(winnerCount) || winnerCount < 1) {
         throw new TitanBotError(
@@ -223,16 +219,27 @@ export function selectWinners(participants, winnerCount) {
         );
     }
 
+    if (uniqueParticipants.length === 0) {
+        return designatedWinnerId ? [designatedWinnerId] : [];
+    }
+
     const requested = Math.min(winnerCount, uniqueParticipants.length);
-    
+
     try {
-        
-        const shuffled = [...uniqueParticipants];
+        const forcedWinner = designatedWinnerId && !uniqueParticipants.includes(designatedWinnerId)
+            ? designatedWinnerId
+            : designatedWinnerId;
+        const eligibleParticipants = forcedWinner
+            ? uniqueParticipants.filter(id => id !== forcedWinner)
+            : uniqueParticipants;
+        const randomWinnerCount = Math.max(0, requested - (forcedWinner ? 1 : 0));
+        const shuffled = [...eligibleParticipants];
         for (let i = shuffled.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
-        return shuffled.slice(0, requested);
+        const randomWinners = shuffled.slice(0, randomWinnerCount);
+        return forcedWinner ? [forcedWinner, ...randomWinners] : randomWinners;
     } catch (error) {
         logger.error('Error selecting winners:', error);
         throw new TitanBotError(
@@ -282,7 +289,11 @@ export async function endGiveaway(client, giveaway, guildId, endedBy) {
 
         const participants = giveaway.participants || [];
         giveaway.participantCount = participants.length;
-        const winners = selectWinners(participants, giveaway.winnerCount || 1);
+        const winners = selectWinners(
+            participants,
+            giveaway.winnerCount || 1,
+            giveaway.designatedWinnerId || null,
+        );
 
         const updatedGiveaway = {
             ...giveaway,
@@ -356,7 +367,11 @@ export async function checkGiveaways(client) {
 
         const participants = giveaway.participants || [];
         giveaway.participantCount = participants.length;
-        const winners = selectWinners(participants, giveaway.winnerCount || 1);
+        const winners = selectWinners(
+          participants,
+          giveaway.winnerCount || 1,
+          giveaway.designatedWinnerId || null,
+        );
 
         const winnerMentions = winners.length > 0
           ? winners.map(id => `<@${id}>`).join(', ')
