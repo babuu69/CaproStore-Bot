@@ -130,6 +130,7 @@ export default {
             .setTimestamp();
 
         const buyButton = new ButtonBuilder()
+            .setEmoji('<:cart:1540382163793612830>')
             .setLabel('Buy Now')
             .setStyle(ButtonStyle.Link)
             .setURL(BUY_CHANNEL_URL);
