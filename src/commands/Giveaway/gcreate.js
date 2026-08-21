@@ -21,7 +21,7 @@ const GIVEAWAY_MIN_WINNERS = botConfig.giveaways?.minimumWinners ?? 1;
 const GIVEAWAY_MAX_WINNERS = botConfig.giveaways?.maximumWinners ?? 10;
 
 const EMOJI = {
-    confetti: { id: '1539966415468101633', name: 'confetti', animated: true },
+    confetti: { id: '1540396507474174033', name: 'confetti', animated: true },
     member: { id: '1540381772565577800', name: 'member' },
     timer: { id: '1540381779960266784', name: 'timer' },
     verify: { id: '1539966415468101632', name: 'verify', animated: true },
@@ -47,12 +47,6 @@ function createBeautifulGiveawayEmbed(data) {
                 '',
                 `${customEmoji(EMOJI.timer)} **Ends**`,
                 `> <t:${Math.floor(endTime / 1000)}:R>`,
-                '',
-                `${customEmoji(EMOJI.shield)} **Requirement**`,
-                '> Must be a member of this server.',
-                '',
-                `${customEmoji(EMOJI.info)} **How to enter**`,
-                '> Click the button below to enter the giveaway!',
                 '',
                 `${customEmoji(EMOJI.heart)} **Good luck!**`,
             ].join('\n')
