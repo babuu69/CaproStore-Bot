@@ -249,7 +249,14 @@ class TitanBot extends Client {
 
   setupCronJobs() {
     cron.schedule('0 6 * * *', runSafeTask('birthday_check', () => checkBirthdays(this)));
-    cron.schedule('* * * * *', runSafeTask('giveaway_check', () => checkGiveaways(this)));
+
+    // Check giveaways every 10 seconds so they end automatically.
+    // Also recover giveaways that expired while the bot was offline/restarting.
+    cron.schedule('*/10 * * * * *', runSafeTask('giveaway_check', () => checkGiveaways(this)));
+    setTimeout(() => {
+      runSafeTask('giveaway_startup_check', () => checkGiveaways(this))();
+    }, 2000);
+
     cron.schedule('*/15 * * * *', runSafeTask('counter_update', () => this.updateAllCounters()));
   }
 
