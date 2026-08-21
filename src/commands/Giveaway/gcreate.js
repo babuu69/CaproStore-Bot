@@ -12,7 +12,7 @@ import {
 import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { saveGiveaway } from '../../utils/giveaways.js';
-import { parseDuration, validatePrize, validateWinnerCount } from '../../services/giveawayService.js';
+import { parseDuration, validatePrize, validateWinnerCount, createGiveawayEmbed, createGiveawayButtons } from '../../services/giveawayService.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { botConfig, getColor } from '../../config/bot.js';
@@ -31,48 +31,6 @@ const EMOJI = {
     star: { id: '1540381763099168789', name: 'star' },
 };
 
-function createBeautifulGiveawayEmbed(data) {
-    const endTime = data.endsAt || data.endTime;
-
-    return new EmbedBuilder()
-        .setColor(getColor('giveaway.active'))
-        .setTitle(`${customEmoji(EMOJI.confetti)} GIVEAWAY`)
-        .setDescription(
-            [
-                `${customEmoji(EMOJI.star)} **Prize**`,
-                `> **${data.prize}**`,
-                '',
-                `${customEmoji(EMOJI.member)} **Winners**`,
-                `> **${data.winnerCount}**`,
-                '',
-                `${customEmoji(EMOJI.timer)} **Ends**`,
-                `> <t:${Math.floor(endTime / 1000)}:R>`,
-                '',
-                `${customEmoji(EMOJI.heart)} **Good luck!**`,
-            ].join('\n')
-        )
-        .setFooter({ text: `Hosted by ${data.hostName}` })
-        .setTimestamp();
-}
-
-function customEmoji(emoji) {
-    return `<${emoji.animated ? 'a' : ''}:${emoji.name}:${emoji.id}>`;
-}
-
-function createBeautifulButtons() {
-    return new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setCustomId('giveaway_join')
-            .setLabel('Enter Giveaway')
-            .setEmoji(EMOJI.verify)
-            .setStyle(ButtonStyle.Success),
-        new ButtonBuilder()
-            .setCustomId('giveaway_end')
-            .setLabel('End Giveaway')
-            .setEmoji(EMOJI.shield)
-            .setStyle(ButtonStyle.Danger),
-    );
-}
 
 export default {
     data: new SlashCommandBuilder()
@@ -81,7 +39,7 @@ export default {
         .addStringOption(option =>
             option
                 .setName('duration')
-                .setDescription('How long the giveaway should last (e.g. 1h, 30m, 5d).')
+                .setDescription('How long the giveaway should last (e.g. 10m, 10 minutes, 1h, 5d).')
                 .setRequired(true)
         )
         .addIntegerOption(option =>
@@ -165,8 +123,8 @@ export default {
         };
 
         const giveawayMessage = await targetChannel.send({
-            embeds: [createBeautifulGiveawayEmbed(giveawayData)],
-            components: [createBeautifulButtons()],
+            embeds: [createGiveawayEmbed(giveawayData, 'active')],
+            components: [createGiveawayButtons()],
         });
 
         giveawayData.messageId = giveawayMessage.id;
